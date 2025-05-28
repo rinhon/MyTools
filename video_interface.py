@@ -79,7 +79,7 @@ class VideoInterface(QWidget):
 
         self.video_widget = VideoWidget(self.video_preview_card)
         # 将媒体播放器与视频组件关联
-        self.video_widget.setVideo(self.media_player)
+        # self.video_widget.setVideo()
         self.video_preview_layout.addWidget(self.video_widget)
 
         # 添加视频预览卡片到主布局
@@ -197,6 +197,7 @@ class VideoInterface(QWidget):
 
             # 设置媒体源并播放
             self.media_player.setSource(QUrl.fromLocalFile(self.video_path))
+            self.video_widget.setVideo(self.media_player.source())
             self.media_player.play()
             
             # 更新选中的文件路径显示
