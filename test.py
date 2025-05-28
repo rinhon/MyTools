@@ -33,9 +33,6 @@ class VideoInterface(QWidget):
         self.temp_end_time = "00:00:00"  # 临时结束时间
         self.temp_time_stamp = ("00:00:00", "00:00:00")  # 临时时间戳
         
-        # 创建媒体播放器实例
-        self.media_player = MediaPlayer()
-        
         # 创建定时器用于更新当前时间
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_current_time)
@@ -78,8 +75,6 @@ class VideoInterface(QWidget):
         self.video_preview_layout.addWidget(self.video_preview_title)
 
         self.video_widget = VideoWidget(self.video_preview_card)
-        # 将媒体播放器与视频组件关联
-        self.video_widget.setVideo(self.media_player)
         self.video_preview_layout.addWidget(self.video_widget)
 
         # 添加视频预览卡片到主布局
@@ -116,8 +111,40 @@ class VideoInterface(QWidget):
         self.temp_time_label = BodyLabel(f"临时时间段: {self.temp_start_time} - {self.temp_end_time}")
         self.time_segment_card_layout.addWidget(self.temp_time_label)
         
+        # 添加测试按钮用于调试
+        debug_button = PushButton("调试信息", self.time_segment_card)
+        debug_button.clicked.connect(self.debug_video_widget)
+        self.time_segment_card_layout.addWidget(debug_button)
+        
         # 添加时间段选择卡片到主布局
         layout.addWidget(self.time_segment_card)
+
+    def debug_video_widget(self):
+        """调试VideoWidget的属性和方法"""
+        print("=== VideoWidget 调试信息 ===")
+        print(f"VideoWidget 类型: {type(self.video_widget)}")
+        print(f"VideoWidget 属性: {dir(self.video_widget)}")
+        
+        # 检查是否有媒体播放器相关属性
+        attrs_to_check = ['mediaPlayer', 'player', '_player', 'media_player', 
+                         'position', 'duration', 'state', 'playbackState']
+        
+        for attr in attrs_to_check:
+            if hasattr(self.video_widget, attr):
+                try:
+                    value = getattr(self.video_widget, attr)
+                    print(f"找到属性 {attr}: {value} (类型: {type(value)})")
+                    
+                    # 如果是媒体播放器对象，进一步检查
+                    if hasattr(value, 'position'):
+                        pos = value.position()
+                        print(f"  - position(): {pos}")
+                    if hasattr(value, 'duration'):
+                        dur = value.duration()
+                        print(f"  - duration(): {dur}")
+                        
+                except Exception as e:
+                    print(f"访问属性 {attr} 时出错: {e}")
 
     def ms_to_time_string(self, ms):
         """将毫秒转换为时间字符串格式 HH:MM:SS"""
@@ -133,13 +160,36 @@ class VideoInterface(QWidget):
 
     def update_current_time(self):
         """更新当前播放时间"""
-        if self.media_player:
-            # 获取当前播放位置（毫秒）
-            position = self.media_player.position()
-            self.current_time = self.ms_to_time_string(position)
+        try:
+            position = None
             
-            # 更新界面显示
-            self.current_time_label.setText(f"当前时间: {self.current_time}")
+            # 尝试多种方式获取当前播放位置
+            if hasattr(self.video_widget, 'mediaPlayer'):
+                player = self.video_widget.mediaPlayer
+                if player and hasattr(player, 'position'):
+                    position = player.position()
+                    
+            elif hasattr(self.video_widget, 'player'):
+                player = self.video_widget.player
+                if player and hasattr(player, 'position'):
+                    position = player.position()
+                    
+            elif hasattr(self.video_widget, '_player'):
+                player = self.video_widget._player
+                if player and hasattr(player, 'position'):
+                    position = player.position()
+                    
+            elif hasattr(self.video_widget, 'position'):
+                position = self.video_widget.position()
+            
+            # 更新时间显示
+            if position is not None:
+                self.current_time = self.ms_to_time_string(position)
+                self.current_time_label.setText(f"当前时间: {self.current_time}")
+            
+        except Exception as e:
+            # 静默处理错误，避免频繁的错误信息
+            pass
 
     def set_start_time(self):
         """ 设置开始时间 """
@@ -171,13 +221,53 @@ class VideoInterface(QWidget):
 
     def toggle_play_pause(self):
         """ 切换视频的播放/暂停状态 """
-        if self.media_player:
-            if self.media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
-                self.media_player.pause()
-                self.stop_label.setText("播放")
-            else:
-                self.media_player.play()
-                self.stop_label.setText("暂停")
+        try:
+            # 尝试多种方式控制播放/暂停
+            if hasattr(self.video_widget, 'mediaPlayer'):
+                player = self.video_widget.mediaPlayer
+                if player:
+                    if hasattr(player, 'playbackState'):
+                        if player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+                            player.pause()
+                            self.stop_label.setText("播放")
+                        else:
+                            player.play()
+                            self.stop_label.setText("暂停")
+                        return
+                        
+            elif hasattr(self.video_widget, 'player'):
+                player = self.video_widget.player
+                if player:
+                    if hasattr(player, 'playbackState'):
+                        if player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+                            player.pause()
+                            self.stop_label.setText("播放")
+                        else:
+                            player.play()
+                            self.stop_label.setText("暂停")
+                        return
+            
+            # 如果VideoWidget直接有播放控制方法
+            if hasattr(self.video_widget, 'pause') and hasattr(self.video_widget, 'play'):
+                # 这里需要根据实际情况判断播放状态
+                if hasattr(self.video_widget, 'isPlaying'):
+                    if self.video_widget.isPlaying():
+                        self.video_widget.pause()
+                        self.stop_label.setText("播放")
+                    else:
+                        self.video_widget.play()
+                        self.stop_label.setText("暂停")
+                else:
+                    # 简单的切换逻辑
+                    if self.stop_label.text() == "暂停":
+                        self.video_widget.pause()
+                        self.stop_label.setText("播放")
+                    else:
+                        self.video_widget.play()
+                        self.stop_label.setText("暂停")
+                        
+        except Exception as e:
+            print(f"播放控制出错: {e}")
 
     def open_video_file_dialog(self):
         """ 打开视频文件选择对话框 """
@@ -195,9 +285,9 @@ class VideoInterface(QWidget):
             # 保存视频路径
             self.video_path = file_path
 
-            # 设置媒体源并播放
-            self.media_player.setSource(QUrl.fromLocalFile(self.video_path))
-            self.media_player.play()
+            # 视频预览 - 使用原来的方式
+            self.video_widget.setVideo(QUrl.fromLocalFile(self.video_path))
+            self.video_widget.play()
             
             # 更新选中的文件路径显示
             self.selected_file_label.setText(
