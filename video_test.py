@@ -1,14 +1,17 @@
-import sys,base64
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import *
-from PyQt6.QtMultimedia import *
-from PyQt6.QtMultimediaWidgets import *
- 
-class DarkMediaPlayer(QMainWindow):
+import sys
+import base64
+from PyQt6.QtCore import Qt, QByteArray, QTimer, QSize, QUrl, QPropertyAnimation
+from PyQt6.QtGui import QIcon, QFontDatabase, QPixmap, QColor, QFont
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,
+                             QSlider, QPushButton, QLabel, QFileDialog, QGraphicsDropShadowEffect, QGraphicsOpacityEffect, QApplication)
+from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
+from PyQt6.QtMultimediaWidgets import QVideoWidget
+
+
+class DarkMediaPlayer(QWidget):
     def __init__(self, video_path):
         super().__init__()
- 
+
         # 图标缓存字典
         self.icons = {
             'play': self.base64_to_icon("""iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAMAAACahl6sAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAbUExURQAAAICAgJ6enqSfn6GhoaOhoaGgoKKhoauqqkGbLowAAAAHdFJOUwACHTXBz/VW8SGWAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAA8ElEQVR4Xu3PSQqDQAAAwYnG5f8vzmUuAWlQPFY/oKHGf5/v8ax9nYfbLedc3G2bg8tAQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOhAQkA4EBKQDAQHpQEBAOpB3IGP8ADrocFcHCNxUAAAAAElFTkSuQmCC"""),
@@ -22,7 +25,7 @@ class DarkMediaPlayer(QMainWindow):
             'fullscreen': self.base64_to_icon("""iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAMAAACahl6sAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAADYUExURQAAAKqqqp+fn6qZmZ+fn56enp+fn6Ojo6GhoaSkpJ6enqWenqSkpKKioqOjo6CgoKOjo6CgoKOfn6SgoKGhoaKioqKioqKioqOgoKOhoaKgoKKioqOhoaGhoaGhoaKhoaKgoKKgoKGhoaOhoaGhoaGhoaKgoKKioqKioqKhoaKhoaOhoaKhoaKgoKGhoaKioqOhoaKhoaKioqKhoaOhoaKhoaKhoaOhoaGhoaKhoaKhoaKhoaKhoaKhoaKgoKKhoaKhoaKhoaKhoaKhoaKhoaKhoaKhoaKhoYP+aXIAAABHdFJOUwAGCA8QFRgZGxwdIiosMjM6O0BDTFVYWltkbnB3gIWHiYyTlZuen6GkqKqrra+xt7m7v8PExcjMz9DT1tnf6Ort7vHz9Pr8xjWmFQAAAAlwSFlzAAAOwwAADsMBx2+oZAAAA6FJREFUeF7t3WdTIkEUhWHMOaIYkCAGjIg5K8b5//9oUV9gQRy63S29tuf51j19pu6tUmamHOyEiIiI/CLTqXS+WD7obCvXS8RDT36XeJxyMZ9OTRP5jMGF7fvI3dkwOWfDp0Rd3K2l+sn5SZaeOYWrAklnBYKunktJku7GVgl7qJB1dkvQw+oYWTdd2UeCXjx/jqeJeXnMdhN3MLRHys81cWdXBP0cjxLvaLxCxFOGvLMMQU8PM+Q7mGe9r5MBTuBs4ICor0VOEGuRxTVPN5dHfKDHWZkl72V+nXico8ubJ4qpmScfY4albw5zU8x/s4mlfUp6M878h0YfWPliZ5JZEyZ3KOtFZYjZD3Qfs7DqfI5JM+YuKK1qr4vJ9rIsq9roY86QkUOKq8oy19ZY4zq4zJQxm5RXvTLGXeMb9yWbzJizTIHVuxVm2kiypPppxYxBG5QYRR/fQZZYEV2MMGNQ3zlFRiVm3umv37eb+7z62xxFRs+DzLRKsSDaYcKo+vVkgYlWaxyPTF0H35ukzGibiVZ3HN9nbFbtanLPuEX9OWeJCbNyFPrBk1z9V2SCCbOmKDRKMdEszdEnxobV7urTjJvlOXrD2LAbSs0zblbk6CVjwy4ptci4WZmjR4wNO6LUMuNmtQfoA8aGxZeqRr6eGrFGjVijRqxRI9aoEWvUiDVqxBo1Yo0asUaNWKNGrFEj1qgRa9SINWrEGjViTXypWxxdZ2zYCqXuMm5We5/A4VXU7zZLqe3/PN179nrwB/xkJRInr6We9jBsMVyoRFcZ7/epv8NA5jq6LcR8YeVfvjfzxX5QqSIiIiIiIiIiIiIiIiIiIiIi8h+F8ZpTKC+eBfMqYDAvZwbzuqzexP56asQaNWKNGrFGjVijRqxRI9aoEWvUiDVqxBo1Yo0asUaNWKNGrFEj1qgRa9SINb+kkWC27QhmI5VgtrYJZrOhYLZ/CmZDrmC2SAtn07pgthEMZmPHYLbaDGfz02C2ow1ng+BgtmwOZxPtYLY1D2ej+XC2/q+enMW+Trzf4R6oPXv7WuQEHYxXWO8pQ95ZhqCnhxnyHQ3tEfFzTdzZFUE/x6PEHXRlG1dGD57fdag/yfl4zHYTdzPWuFtxViHr7Jagh9XY63lbyVL9rt5RgaSzAkFXz6WY+8QYgwvb95zCxVnM/xFub/iUqIu7tVQ/uc+YTqXzxTIf6HG2cr1EPPTkd4nHKRfz6ZT+T7GIiMjvkUj8Aem6EFU7bMVCAAAAAElFTkSuQmCC"""),
             'reduce': self.base64_to_icon("""iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAMAAACahl6sAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAACKUExURQAAAKqZmaampqampqKioqCgoKOjo6CgoKKioqSfn6GhoaOfn6KioqGhoaOgoKGhoaOhoaOgoKOgoKKioqOhoaKgoKGhoaKhoaKgoKOhoaGhoaKhoaGhoaKhoaKhoaOhoaKgoKKioqOhoaKhoaOhoaGhoaKioqKhoaKhoaKhoaKhoaKhoaKhoaKhoS4aImYAAAAtdFJOUwAPFBceIyQzNzg5QEJMTlFkZnR4enyAh4mVnqKmqq2ur7S2uLm8v8PR1NfZ+xKpnIcAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAPESURBVHhe7dxrV+IwEAZgFFQE0YpyXUG8XzD//+9tqy9pe2TdTJIhXfZ9Pm3HM2HGxVLOyaRFRESUXm/cw7+EvBNV9N6MMW8eFXkn6jjIqykc4NqZd6KSKeqZ4tqZd6KSFepZ4dqZd6KSZ9TzjGtn3olK2AgbUcJG2IgSNsJGlLARNqKEjbARJWyEjShhI2xECRthI0rYCBtRwkbYiBI2wkaUsJGmNbJGPUtcO1sicY3r1D5QzwzXzmZI/MB1Yh2UY0YIOBsh0XQQSKuPakyGgLMMiaaPQFqb/QtmgICzARIbsvXhFdWYQwScHSLRvCKQVBfFmEcEBB6RaroIpDRHLfI/kcofyRyBhM5Qitetx97wzBki6dyiEnOHgMgdks0tAslcoRCvd1blvWWuEEnkAmUY84SI0BPSjblAJA0UkTtHROgc6TlEUjhBCbkbhMRusEDuBKGdu0QBBe8PAvsxlLtEbLfO7P0qN0TQwxBLFG53fxc+tZ+DhV+IevmFRT7NTxHdhU5/9o7X/RL4qGQf1j69z/qBT/XtyeLZwXrzPaqEBbxhmdLHGi/2o8WkjQVqjrGI2D0WCHCPpcSOsUCV72LXyA9yjcWktvwS7fc8Ia8nk+/KZxWZ798tx/iJzE20LxLdyiejwBjppR5+IvHk+Vyy3Xn53OVuy8hGMcoh8hDpXVXKHrC0szdkVsn+S16GR8iL6mj4ghdws3WG5mC6wg36R8vZKBtsvYHH0R5ko9kSL/aj1bQpEzRERERERERERERERERERERERET/J8cNzJ8bz8QDbu4OnTeeRdnA/JipTHN2MjsI5yTKBua7+Jsz7ciVq0gbmBuwXZYbmL8JGIGpqo7DSMTYwAxBQzAbtWEYgfANzBURJobrozACIRuYmzMIE7yBudOf1n+FgaMw9Rv/6zR0NEmkWxsWCxqGqQ3BzHc/EF4b3wv4bKyOwCQY3yuUA8eRBiqTDR6XI8dRRlxTjh2jhNw/PXRcHTsOHgNPNnL8pRw8DhzMTzNwXGHvXQ8IiNihquRHJVQOr/AYujpCahMOryiPE/F4DrbPvA04TqR1ilrMCwICdsRtl8Pff2RHwsWjcG0kmncE0tqckhVwCJL4ZC4Ve3Ms1d4cFLY3R7ftz2F6PKeRjShhI2xECRthI0rYCBtRwkbYiBI2wkaUsBE2ooSNsBElbISNKGEjbEQJG2EjStgIG1GyQD0LXDvzTlQyQT0TXDvzTlSy2VLivRdF8TxnmeNiC/L9tqGUv/BOVNMfe24n8U4kIiKKp9X6DfcTsleW0oBiAAAAAElFTkSuQmCC""")
         }
-        
+
         self.video_path = video_path
         self.hide_timer = QTimer()
         self.volume_popup = None
@@ -32,75 +35,73 @@ class DarkMediaPlayer(QMainWindow):
         self.setup_hide_timer()
         self.setup_styles()
         self.setup_connections()
- 
+
     def base64_to_icon(self, base64_str):
         """将base64字符串转换为QIcon"""
         # 去除可能存在的头部信息
         if base64_str.startswith('data:image'):
             base64_str = base64_str.split(',', 1)[1]
-        
+
         # 解码base64
         image_data = base64.b64decode(base64_str)
         pixmap = QPixmap()
         pixmap.loadFromData(QByteArray(image_data))
         return QIcon(pixmap)
- 
+
     def init_ui(self):
         # 窗口设置
         self.setWindowTitle("Dark Media Player")
         self.setWindowIcon(QIcon("dark_icon.ico"))
         self.setMinimumSize(1280, 720)
-        
-        # 主容器
-        main_widget = QWidget()
-        main_widget.setObjectName("MainWidget")
-        self.setCentralWidget(main_widget)
-        
+
+        # 设置主窗口属性
+        self.setObjectName("MainWidget")
+
         # 视频显示区域
         self.video_widget = QVideoWidget()
         self.video_widget.setStyleSheet("background: #000000;")
         self.video_widget.mousePressEvent = self.toggle_controls
-        
+
         # 控制面板
         self.control_panel = QFrame()
         self.control_panel.setObjectName("ControlPanel")
         self.control_panel.setFixedHeight(100)
-        
+
         # 主布局
-        layout = QVBoxLayout(main_widget)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        
+
         layout.addWidget(self.video_widget)
         layout.addWidget(self.control_panel)
-        
+
         # 初始化控制面板组件
         self.create_controls()
         self.create_volume_slider()
- 
+
     def create_controls(self):
         # 进度条
         self.progress_bar = QSlider(Qt.Orientation.Horizontal)
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setCursor(Qt.CursorShape.PointingHandCursor)
-        
+
         # 时间显示
         time_layout = QHBoxLayout()
         self.current_time = QLabel("00:00:00")
         self.remaining_time = QLabel("00:00:00")
-        
+
         # 控制按钮
         control_layout = QHBoxLayout()
         control_layout.setContentsMargins(0, 0, 0, 0)
         control_layout.setSpacing(30)
-        
+
         # 按钮创建
         self.volume_btn = self.create_icon_button("volume", 24, "音量调节")
         self.rewind_btn = self.create_icon_button("rewind", 24, "快退10秒")
         self.play_btn = self.create_icon_button("play", 24, "播放/暂停")
         self.forward_btn = self.create_icon_button("forward", 24, "快进10秒")
         self.fullscreen_btn = self.create_icon_button("fullscreen", 24, "全屏切换")
-        
+
         # 布局排列
         control_layout.addWidget(self.volume_btn)
         control_layout.addStretch()
@@ -109,38 +110,38 @@ class DarkMediaPlayer(QMainWindow):
         control_layout.addWidget(self.forward_btn)
         control_layout.addStretch()
         control_layout.addWidget(self.fullscreen_btn)
-        
+
         # 整体布局
         panel_layout = QVBoxLayout(self.control_panel)
         panel_layout.setContentsMargins(30, 10, 30, 20)
         panel_layout.addWidget(self.progress_bar)
         panel_layout.addLayout(time_layout)
         panel_layout.addLayout(control_layout)
-        
+
         # 时间标签布局
         time_layout.addWidget(self.current_time)
         time_layout.addStretch()
         time_layout.addWidget(self.remaining_time)
- 
+
     def create_volume_slider(self):
         # 音量弹出面板
         self.volume_popup = QWidget(self.control_panel)  # 改为控制面板的子部件
         self.volume_popup.setObjectName("VolumePopup")
         self.volume_popup.setFixedSize(120, 40)
         self.volume_popup.hide()
-        
+
         # 音量滑块
         self.volume_slider = QSlider(Qt.Orientation.Horizontal)
         self.volume_slider.setRange(0, 100)
         self.volume_slider.setValue(100)
         self.volume_slider.setFixedWidth(100)
         self.volume_slider.setCursor(Qt.CursorShape.PointingHandCursor)
-        
+
         # 布局
         popup_layout = QHBoxLayout(self.volume_popup)
         popup_layout.setContentsMargins(10, 0, 10, 0)
         popup_layout.addWidget(self.volume_slider)
- 
+
     def create_icon_button(self, icon_name, size, tooltip):
         btn = QPushButton()
         btn.setIcon(self.icons[icon_name])  # 从缓存获取图标
@@ -151,13 +152,13 @@ class DarkMediaPlayer(QMainWindow):
         btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         btn.setObjectName("ControlButton")
         return btn
- 
+
     def setup_styles(self):
         # 字体设置
         QFontDatabase.addApplicationFont("SegoeUI.ttf")
         font = QFont("Segoe UI", 10)
         self.setFont(font)
-        
+
         # 全局样式表
         self.setStyleSheet("""
             #MainWidget {
@@ -206,56 +207,56 @@ class DarkMediaPlayer(QMainWindow):
                 border: 1px solid rgba(255, 255, 255, 0.1);
             }
         """)
-        
+
         # 控制面板阴影
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(20)
         shadow.setColor(QColor(0, 0, 0, 80))
         shadow.setOffset(0, 4)
         self.control_panel.setGraphicsEffect(shadow)
- 
+
         # 音量滑块阴影
         volume_shadow = QGraphicsDropShadowEffect()
         volume_shadow.setBlurRadius(15)
         volume_shadow.setColor(QColor(0, 0, 0, 60))
         volume_shadow.setOffset(2, 2)
         self.volume_popup.setGraphicsEffect(volume_shadow)
- 
+
     def init_media(self):
         self.media_player = QMediaPlayer()
         self.audio_output = QAudioOutput()
         self.media_player.setAudioOutput(self.audio_output)
         self.media_player.setVideoOutput(self.video_widget)
-        
+
         # 自动播放
         self.media_player.setSource(QUrl.fromLocalFile(self.video_path))
         self.media_player.play()
- 
+
     def setup_animations(self):
         # 控制面板透明度动画
         self.opacity_effect = QGraphicsOpacityEffect()
         self.control_panel.setGraphicsEffect(self.opacity_effect)
-        
+
         self.fade_out = QPropertyAnimation(self.opacity_effect, b"opacity")
         self.fade_out.setDuration(500)
         self.fade_out.setStartValue(1.0)
         self.fade_out.setEndValue(0.0)
-        
+
         self.fade_in = QPropertyAnimation(self.opacity_effect, b"opacity")
         self.fade_in.setDuration(300)
         self.fade_in.setStartValue(0.0)
         self.fade_in.setEndValue(1.0)
- 
+
     def setup_hide_timer(self):
         self.hide_timer.timeout.connect(self.auto_hide_controls)
         self.hide_timer.setInterval(1000)
- 
+
     def setup_connections(self):
         # 媒体信号
         self.media_player.positionChanged.connect(self.update_progress)
         self.media_player.durationChanged.connect(self.update_duration)
         self.media_player.playbackStateChanged.connect(self.update_play_icon)
-        
+
         # 按钮信号
         self.play_btn.clicked.connect(self.toggle_play)
         self.rewind_btn.clicked.connect(lambda: self.seek(-10))
@@ -263,22 +264,23 @@ class DarkMediaPlayer(QMainWindow):
         self.fullscreen_btn.clicked.connect(self.toggle_fullscreen)
         self.progress_bar.sliderMoved.connect(self.set_position)
         self.volume_btn.clicked.connect(self.toggle_volume_popup)
-        
+
         # 音量滑块信号
         self.volume_slider.valueChanged.connect(self.set_volume)
         self.audio_output.volumeChanged.connect(self.update_volume_slider)
- 
+
     def toggle_volume_popup(self):
         if self.volume_popup.isVisible():
             self.volume_popup.hide()
         else:
             # 计算弹出位置（在音量按钮上方）
             btn_pos = self.volume_btn.pos()
-            popup_x = btn_pos.x() + self.volume_btn.width()//2 - self.volume_popup.width()//3
+            popup_x = btn_pos.x() + self.volume_btn.width()//2 - \
+                self.volume_popup.width()//3
             popup_y = btn_pos.y() - self.volume_popup.height() - 5
             self.volume_popup.move(popup_x, popup_y)
             self.volume_popup.show()
- 
+
     def set_volume(self, value):
         self.audio_output.setVolume(value / 100)
         # 更新音量按钮图标
@@ -290,11 +292,11 @@ class DarkMediaPlayer(QMainWindow):
             self.volume_btn.setIcon(self.icons["volume_medium"])
         else:
             self.volume_btn.setIcon(self.icons["volume"])
- 
+
     def update_volume_slider(self):
         volume = round(self.audio_output.volume() * 100)
         self.volume_slider.setValue(volume)
- 
+
     def mousePressEvent(self, event):
         # 点击音量滑块外部时隐藏
         if self.volume_popup.isVisible():
@@ -302,11 +304,11 @@ class DarkMediaPlayer(QMainWindow):
                 if not self.volume_btn.geometry().contains(event.pos()):
                     self.volume_popup.hide()
         super().mousePressEvent(event)
- 
+
     def toggle_controls(self, event):
         if self.fade_out.state() == QPropertyAnimation.State.Running:
             return
-            
+
         if self.control_panel.isVisible():
             self.fade_out.start()
             self.control_panel.setVisible(False)
@@ -314,59 +316,60 @@ class DarkMediaPlayer(QMainWindow):
             self.control_panel.setVisible(True)
             self.fade_in.start()
             self.reset_hide_timer()
- 
+
     def reset_hide_timer(self):
         if self.isFullScreen():
             self.hide_timer.start()
             self.setCursor(Qt.CursorShape.ArrowCursor)
- 
+
     def auto_hide_controls(self):
         if self.isFullScreen() and not self.underMouse():
             self.fade_out.start()
             self.control_panel.setVisible(False)
             self.setCursor(Qt.CursorShape.BlankCursor)
         self.hide_timer.stop()
- 
+
     def mouseMoveEvent(self, event):
         if self.isFullScreen() and not self.control_panel.isVisible():
             self.control_panel.setVisible(True)
             self.fade_in.start()
             self.reset_hide_timer()
- 
+
     def update_progress(self, position):
         self.progress_bar.setValue(position)
         self.current_time.setText(self.format_time(position))
         self.remaining_time.setText(self.format_time(
             self.media_player.duration() - position))
- 
+
     def update_duration(self, duration):
         self.progress_bar.setRange(0, duration)
- 
+
     def format_time(self, ms):
         seconds = ms // 1000
         hours = seconds // 3600
         minutes = (seconds % 3600) // 60
         seconds = seconds % 60
         return f"{hours:02}:{minutes:02}:{seconds:02}"
- 
+    def is_playing_status(self):
+        return self.media_player.isPlaying()
     def toggle_play(self):
         if self.media_player.isPlaying():
             self.media_player.pause()
         else:
             self.media_player.play()
- 
+
     def update_play_icon(self):
         icon = "play" if self.media_player.isPlaying() else "pause"
         self.play_btn.setIcon(self.icons[icon])
- 
+
     def seek(self, seconds):
         new_pos = self.media_player.position() + seconds * 1000
         new_pos = max(0, min(new_pos, self.media_player.duration()))
         self.media_player.setPosition(new_pos)
- 
+
     def set_position(self, position):
         self.media_player.setPosition(position)
- 
+
     def toggle_fullscreen(self):
         if self.isFullScreen():
             self.showNormal()
@@ -377,15 +380,20 @@ class DarkMediaPlayer(QMainWindow):
             self.showFullScreen()
             self.reset_hide_timer()
             self.fullscreen_btn.setIcon(self.icons["reduce"])
- 
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Space:
             self.toggle_play()
         super().keyPressEvent(event)
- 
+        
+    def get_current_time(self):
+        return self.media_player.position()
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    player = DarkMediaPlayer("C:/Users/90708/Videos/2f3ac6295bc6c7617532ced9e6d1215b.mp4")
+    player = DarkMediaPlayer(
+        "C:/Users/90708/Videos/2f3ac6295bc6c7617532ced9e6d1215b.mp4")
     player.show()
     sys.exit(app.exec())
