@@ -350,8 +350,10 @@ class DarkMediaPlayer(QWidget):
         minutes = (seconds % 3600) // 60
         seconds = seconds % 60
         return f"{hours:02}:{minutes:02}:{seconds:02}"
+
     def is_playing_status(self):
         return self.media_player.isPlaying()
+
     def toggle_play(self):
         if self.media_player.isPlaying():
             self.media_player.pause()
@@ -385,7 +387,7 @@ class DarkMediaPlayer(QWidget):
         if event.key() == Qt.Key.Key_Space:
             self.toggle_play()
         super().keyPressEvent(event)
-        
+
     def get_current_time(self):
         return self.media_player.position()
 
