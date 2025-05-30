@@ -1,14 +1,15 @@
 from qfluentwidgets import NavigationItemPosition, FluentWindow, SubtitleLabel, setFont
 from qfluentwidgets import FluentIcon as FIF
 
-import sys,base64
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import *
-from PyQt6.QtMultimedia import *
-from PyQt6.QtMultimediaWidgets import *
+import sys
+import base64
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QHBoxLayout, QFrame, QApplication
 
-from main_video  import VideoInterface
+from main_video import VideoInterface
+
+
 class Widget(QFrame):
 
     def __init__(self, text: str, parent=None):
@@ -48,10 +49,9 @@ class Window(FluentWindow):
 
         self.navigationInterface.addSeparator()
 
-        self.addSubInterface(self.albumInterface, FIF.ALBUM, 'Albums', NavigationItemPosition.SCROLL)
-        self.addSubInterface(self.albumInterface1, FIF.ALBUM, 'Album 1', parent=self.albumInterface)
-
-        self.addSubInterface(self.settingInterface, FIF.SETTING, 'Settings', NavigationItemPosition.BOTTOM)
+        self.addSubInterface(self.albumInterface, FIF.ALBUM,'Albums', NavigationItemPosition.SCROLL)
+        self.addSubInterface(self.albumInterface1, FIF.ALBUM,'Album 1', parent=self.albumInterface)
+        self.addSubInterface(self.settingInterface, FIF.SETTING,'Settings', NavigationItemPosition.BOTTOM)
 
     def initWindow(self):
         self.resize(900, 700)
