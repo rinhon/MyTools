@@ -52,7 +52,7 @@ class DarkMediaPlayer(QWidget):
         # 窗口设置
         self.setWindowTitle("Dark Media Player")
         self.setWindowIcon(QIcon("dark_icon.ico"))
-        self.setMinimumSize(1280, 720)
+        self.setMinimumSize(720, 480)
 
         # 设置主窗口属性
         self.setObjectName("MainWidget")

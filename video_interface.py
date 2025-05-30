@@ -13,7 +13,7 @@ from qfluentwidgets import (
 )
 from qfluentwidgets.multimedia import VideoWidget, MediaPlayer
 
-import sys, os, keyboard
+import sys, os
 
 
 class VideoInterface(QWidget):

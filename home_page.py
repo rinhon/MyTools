@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtMultimedia import *
 from PyQt6.QtMultimediaWidgets import *
 
-from video_interface  import VideoInterface
+from main_video  import VideoInterface
 class Widget(QFrame):
 
     def __init__(self, text: str, parent=None):
