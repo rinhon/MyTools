@@ -390,7 +390,11 @@ class DarkMediaPlayer(QWidget):
 
     def get_current_time(self):
         return self.media_player.position()
-
+    
+    @property
+    def media_player(self):
+        """提供对内部media_player的访问"""
+        return self.media_player
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

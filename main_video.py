@@ -53,6 +53,10 @@ class VideoInterface(QWidget):
         """重写键盘事件处理"""
         if event.key() == Qt.Key.Key_Space:
             self.toggle_play_pause()  # 空格键触发播放/暂停
+        elif event.key() == Qt.Key.Key_Left:
+            self.seek(-10)  # 左方向键后退10秒
+        elif event.key() == Qt.Key.Key_Right:
+            self.seek(10)  # 右方向键前进10秒
         else:
             super().keyPressEvent(event)  # 其他按键保持默认处理
 
@@ -679,6 +683,37 @@ class VideoInterface(QWidget):
         else:
             self.stop_label.setIcon(FluentIcon.PLAY)
 
+    def seek(self, seconds):
+        """视频快进/后退指定秒数"""
+        if not self.video_widget:
+            return
+        
+        # 获取当前时间（毫秒）
+        current_ms = self.video_widget.get_current_time()
+        if current_ms is None:
+            return
+        
+        # 计算新位置（毫秒）
+        new_pos = current_ms + seconds * 1000
+        
+        # 确保不超出视频范围
+        duration = self.video_widget.media_player.duration()
+        new_pos = max(0, min(new_pos, duration))
+        
+        # 跳转到新位置
+        self.video_widget.media_player.setPosition(new_pos)
+        
+        # 显示操作提示
+        action = "后退" if seconds < 0 else "前进"
+        InfoBar.info(
+            title="视频跳转",
+            content=f"已{action} {abs(seconds)}秒",
+            parent=self,
+            duration=1000,
+            position=InfoBarPosition.BOTTOM_RIGHT
+        )
+
+    
     # 选择视频文件
     def open_video_file_dialog(self):
         """ 打开视频文件选择对话框 """
