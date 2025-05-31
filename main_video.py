@@ -28,10 +28,15 @@ class VideoInterface(QWidget):
 
         self.setObjectName("视频剪辑")
         self.setWindowTitle("视频剪辑工具")
-        self.resize(800, 1110)  # 设置窗口大小
+        self.setFixedHeight(900)  # 设置窗口大小
+
+        # 设置窗口焦点策略
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFocus()  # 确保窗口获得初始焦点
+
         self.center_window()  # 设置窗口居中
 
-        # 1. 创建主窗口的垂直布局，用于容纳所有 CardWidget
+        # 1. 创建主窗口的垂直布局，用于容纳所有
         self.main_v_layout = QVBoxLayout(self)
         self.main_v_layout.setContentsMargins(10, 10, 10, 10)  # 给所有卡片留点边距
         self.main_v_layout.setSpacing(5)  # 卡片之间的垂直间距
@@ -46,19 +51,26 @@ class VideoInterface(QWidget):
         self.timer.timeout.connect(self.update_current_time)
         self.timer.start(100)  # 每100ms更新一次
 
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)  # 允许接收键盘事件
-
         self.setup_ui()
+
     def keyPressEvent(self, event):
         """重写键盘事件处理"""
-        if event.key() == Qt.Key.Key_Space:
-            self.toggle_play_pause()  # 空格键触发播放/暂停
-        elif event.key() == Qt.Key.Key_Left:
-            self.seek(-10)  # 左方向键后退10秒
-        elif event.key() == Qt.Key.Key_Right:
-            self.seek(10)  # 右方向键前进10秒
-        else:
-            super().keyPressEvent(event)  # 其他按键保持默认处理
+        # 只有在视频已加载且窗口有焦点时才处理快捷键
+        if self.hasFocus() and self.video_widget and self.video_path:
+            if event.key() == Qt.Key.Key_Space:
+                self.toggle_play_pause()  # 空格键触发播放/暂停
+                event.accept()  # 标记事件已处理
+                return
+            elif event.key() == Qt.Key.Key_Left:
+                self.seek(-10)  # 左方向键后退10秒
+                event.accept()
+                return
+            elif event.key() == Qt.Key.Key_Right:
+                self.seek(10)  # 右方向键前进10秒
+                event.accept()
+                return
+
+        super().keyPressEvent(event)  # 其他按键保持默认处理
 
     def setup_ui(self):
 
@@ -76,21 +88,30 @@ class VideoInterface(QWidget):
         # --- 1. 第一个 CardWidget (顶部单行区域) ---
         self.card_video_select = CardWidget()
         # 在 CardWidget 内部创建布局
-        self.card_layout = QHBoxLayout(self.card_video_select)
-        self.card_layout.setContentsMargins(1, 1, 1, 1)  # 内部边距
+        self.card_v_layout = QVBoxLayout(self.card_video_select)
 
         # 创建一个 Fluent 风格的标签
         self.time_segment_title = SubtitleLabel("视频选择")
-        self.time_segment_title.setMinimumHeight(45)
-        self.time_segment_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.card_layout.addWidget(self.time_segment_title)
+        self.time_segment_title.setMinimumHeight(20)
+        # self.time_segment_title.setAlignment(Qt.AlignmentFlag.AlignCenter) # 居中
+        self.card_v_layout.addWidget(self.time_segment_title)
+
+        self.card_layout = QHBoxLayout(self.card_video_select)
+        self.card_layout.setContentsMargins(1, 1, 1, 1)  # 内部边距
 
         # 显示选中的文件路径
-        self.selected_file_label = BodyLabel("未选择任何文件", self.card_video_select)
+        self.selected_file_label = LineEdit()
+        self.selected_file_label.setText("未选择视频文件")
+        self.selected_file_label.setReadOnly(True)  # 禁止编辑
         self.card_layout.addWidget(self.selected_file_label)
 
         # 创建一个 Fluent 风格的按钮
         self.select_video_button = PushButton("选择视频文件", self.card_video_select)
+        self.select_video_button.setFocusPolicy(
+            Qt.FocusPolicy.NoFocus)  # 禁止获取焦点
+
+        self.card_v_layout.addLayout(self.card_layout)
+
         # 连接按钮的点击事件到槽函数
         self.select_video_button.clicked.connect(self.open_video_file_dialog)
         self.card_layout.addWidget(self.select_video_button)
@@ -122,7 +143,9 @@ class VideoInterface(QWidget):
         # 3-1 标题区====================================================================
         self.time_segment_card_layout = QVBoxLayout(self.time_segment_card)
         self.time_segment_card_layout.setContentsMargins(5, 5, 5, 5)  # 减小边距
-        self.time_segment_title = SubtitleLabel("时间段选择")
+        self.time_segment_title = SubtitleLabel(
+            "时间段选择", self.time_segment_card)
+        self.time_segment_title.setFixedHeight(20)  # 减小高度
         self.time_segment_card_layout.addWidget(self.time_segment_title)
         # 3-2 第二层区域 (三个并排的矩形)====================================================================
         self.time_segment_card_layout2 = QHBoxLayout()
@@ -173,7 +196,7 @@ class VideoInterface(QWidget):
         self.time_segment_card_layout.addLayout(self.time_segment_card_layout2)
 
         # 表格处理====================================================================
-        self.segments_label = TableWidget()
+        self.segments_label = TableWidget(self.time_segment_card)
 
         # 设置基本属性
         self.segments_label.setBorderRadius(8)  # 设置圆角
@@ -185,7 +208,7 @@ class VideoInterface(QWidget):
         self.segments_label.setContentsMargins(2, 2, 2, 2)  # 减小内边距
 
         # 隐藏垂直表头（行号）
-        self.segments_label.verticalHeader().setVisible(False)
+        # self.segments_label.verticalHeader().setVisible(False)
 
         # 设置表格大小调整策略
         self.segments_label.horizontalHeader().setSectionResizeMode(
@@ -216,41 +239,6 @@ class VideoInterface(QWidget):
         self.segments_label.horizontalHeader().setDefaultAlignment(
             Qt.AlignmentFlag.AlignCenter)  # 表头居中对齐
 
-        # 设置表格样式
-        self.segments_label.setStyleSheet("""
-            QTableWidget {
-                background-color: #ffffff;
-                gridline-color: #e0e0e0;
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-            }
-            QHeaderView::section {
-                background-color: #f5f5f5;
-                padding: 4px;  /* 减小表头内边距 */
-                border: none;
-                border-bottom: 1px solid #e0e0e0;
-                font-weight: bold;
-                color: #424242;
-                font-size: 12px;  /* 减小表头字体大小 */
-            }
-            QTableWidget::item {
-                padding: 2px;  /* 减小单元格内边距 */
-                border: none;
-                font-size: 12px;  /* 减小单元格字体大小 */
-            }
-            QTableWidget::item:selected {
-                background-color: #e3f2fd;
-                color: #1976d2;
-            }
-            QTableWidget::item:hover {
-                background-color: #f5f5f5;
-            }
-            QTableWidget QTableCornerButton::section {
-                background-color: #f5f5f5;
-                border: none;
-            }
-        """)
-
         self.segments_label.itemChanged.connect(
             lambda item: set_item_alignment(item.row(), item.column(), item))
         # 设置单元格文本居中对齐
@@ -270,26 +258,25 @@ class VideoInterface(QWidget):
         # 将第三张卡片添加到主布局中
         self.main_v_layout.addWidget(self.time_segment_card)
 
-     #
-
     # 剪辑视频处理
+
     def cut_video(self, parent):
         # 命令执行卡片
         # 水平布局
         self.command_card = CardWidget()
         self.command_layout = QHBoxLayout(self.command_card)
-        # 生成ffmpeg命令按钮
+        # 剪切视频
+        self.execute_cut_button = PrimaryPushButton(
+            "剪切视频", self.command_card)
+        self.execute_cut_button.clicked.connect(self.execute_video_cut)
+        self.command_layout.addWidget(self.execute_cut_button)
+
+        # 删除原视频
         self.generate_ffmpeg_button = PrimaryPushButton(
-            "生成FFmpeg命令", self.command_card)
+            "删除原视频", self.command_card)
         self.generate_ffmpeg_button.clicked.connect(
             self.generate_ffmpeg_command)
         self.command_layout.addWidget(self.generate_ffmpeg_button)
-
-        # 执行剪辑按钮
-        self.execute_cut_button = PrimaryPushButton(
-            "执行视频剪辑", self.command_card)
-        self.execute_cut_button.clicked.connect(self.execute_video_cut)
-        self.command_layout.addWidget(self.execute_cut_button)
 
         # 添加时间段选择卡片到主布局
         self.main_v_layout.addWidget(self.command_card)
@@ -488,7 +475,14 @@ class VideoInterface(QWidget):
         Flyout.create(
             icon=InfoBarIcon.SUCCESS,
             title='提示',
-            content="可以右键单独删除时间片段",
+            content="\n" +
+            "时间段表格：\n" +
+            "可以右键单独删除时间片段\n" +
+            "\n" +
+            "视频：\n" +
+            "space:暂停/播放\n" +
+            "←：后退10秒\n" +
+            "→：前进10秒",
             target=self.tip_button,
             parent=self,
             isClosable=False,
@@ -673,10 +667,10 @@ class VideoInterface(QWidget):
         """切换视频的播放/暂停状态"""
         if not self.video_widget:
             return
-        
+
         # 切换播放状态
         self.video_widget.toggle_play()
-        
+
         # 更新按钮图标
         if self.video_widget.is_playing_status():
             self.stop_label.setIcon(FluentIcon.PAUSE)
@@ -687,22 +681,22 @@ class VideoInterface(QWidget):
         """视频快进/后退指定秒数"""
         if not self.video_widget:
             return
-        
+
         # 获取当前时间（毫秒）
         current_ms = self.video_widget.get_current_time()
         if current_ms is None:
             return
-        
+
         # 计算新位置（毫秒）
         new_pos = current_ms + seconds * 1000
-        
+
         # 确保不超出视频范围
         duration = self.video_widget.media_player.duration()
         new_pos = max(0, min(new_pos, duration))
-        
+
         # 跳转到新位置
         self.video_widget.media_player.setPosition(new_pos)
-        
+
         # 显示操作提示
         action = "后退" if seconds < 0 else "前进"
         InfoBar.info(
@@ -713,7 +707,6 @@ class VideoInterface(QWidget):
             position=InfoBarPosition.BOTTOM_RIGHT
         )
 
-    
     # 选择视频文件
     def open_video_file_dialog(self):
         """ 打开视频文件选择对话框 """
@@ -734,8 +727,8 @@ class VideoInterface(QWidget):
 
             # 移除旧的视频组件
             if self.video_widget:
-                self.video_preview_layout.removeWidget(self.video_widget)
                 self.video_widget.deleteLater()
+                self.video_preview_layout.removeWidget(self.video_widget)
 
             # 创建新的视频播放器实例
             self.video_widget = DarkMediaPlayer(self.video_path)
@@ -756,6 +749,16 @@ class VideoInterface(QWidget):
                 duration=3000,  # 显示3秒后自动消失
                 position=InfoBarPosition.BOTTOM_RIGHT
             )
+
+            # 重置焦点到主窗口
+            self.setFocus()
+
+            # 调整按钮的焦点策略，避免干扰全局快捷键
+            self.select_video_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            self.clear_all_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            self.start_time_label.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            self.end_time_label.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
             self.center_window()
 
         else:

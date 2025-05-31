@@ -2,11 +2,11 @@ import sys
 import base64
 from PyQt6.QtCore import Qt, QByteArray, QTimer, QSize, QUrl, QPropertyAnimation
 from PyQt6.QtGui import QIcon, QFontDatabase, QPixmap, QColor, QFont
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,QStyle,
                              QSlider, QPushButton, QLabel, QFileDialog, QGraphicsDropShadowEffect, QGraphicsOpacityEffect, QApplication)
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtMultimediaWidgets import QVideoWidget
-from qfluentwidgets import FluentIcon
+from qfluentwidgets import FluentIcon, Slider
 
 
 class DarkMediaPlayer(QWidget):
@@ -32,98 +32,20 @@ class DarkMediaPlayer(QWidget):
         self.video_widget = QVideoWidget()
         self.video_widget.setStyleSheet("background: #000000;")
 
-        # 控制面板
-        self.control_panel = QFrame()
-        self.control_panel.setObjectName("ControlPanel")
-        self.control_panel.setFixedHeight(100)
 
         # 主布局
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        # 创建进度条
+        self.progress_slider = Slider(Qt.Orientation.Horizontal)
+        self.progress_slider.setFixedHeight(30)
+        self.progress_slider.setRange(0, 0)  # 初始范围设为0，等待媒体加载后更新
+        self.progress_slider.mousePressEvent = self.progress_slider_click
+
         layout.addWidget(self.video_widget)
-
-        # # 初始化控制面板组件
-        self.create_controls()
-        # self.create_volume_slider()
-
-    def create_controls(self):
-        # 进度条
-        self.progress_bar = QSlider(Qt.Orientation.Horizontal)
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        # 时间显示
-        time_layout = QHBoxLayout()
-        self.current_time = QLabel("00:00:00")
-        self.remaining_time = QLabel("00:00:00")
-
-        # 控制按钮
-        control_layout = QHBoxLayout()
-        control_layout.setContentsMargins(0, 0, 0, 0)
-        control_layout.setSpacing(30)
-        # 时间标签布局
-        time_layout.addWidget(self.current_time)
-        time_layout.addStretch()
-        time_layout.addWidget(self.remaining_time)
-        
-        
-
-    def setup_styles(self):
-        # 字体设置
-        QFontDatabase.addApplicationFont("SegoeUI.ttf")
-        font = QFont("Segoe UI", 10)
-        self.setFont(font)
-
-        # 全局样式表
-        self.setStyleSheet("""
-            #MainWidget {
-                background: #0a0a0a;
-            }
-            #ControlPanel {
-                background: rgba(16, 16, 16, 0.95);
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 8px;
-            }
-            #ControlButton {
-                background: transparent;
-                border: none;
-                border-radius: 8px;
-                padding: 8px;
-            }
-            #ControlButton:hover {
-                background: rgba(255, 255, 255, 0.1);
-            }
-            #ControlButton:pressed {
-                background: rgba(255, 255, 255, 0.2);
-            }
-            QSlider::groove:horizontal {
-                height: 6px;
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 3px;
-            }
-            QSlider::sub-page:horizontal {
-                background: #0078d4;
-                border-radius: 3px;
-            }
-            QSlider::handle:horizontal {
-                background: #ffffff;
-                width: 16px;
-                height: 16px;
-                margin: -5px 0;
-                border-radius: 8px;
-            }
-            QLabel {
-                color: rgba(255, 255, 255, 0.8);
-                font-size: 12px;
-            }
-            #VolumePopup {
-                background: rgba(32, 32, 32, 0.9);
-                border-radius: 4px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-        """)
+        layout.addWidget(self.progress_slider)
 
 
     def init_media(self):
@@ -132,23 +54,25 @@ class DarkMediaPlayer(QWidget):
         self.media_player.setAudioOutput(self.audio_output)
         self.media_player.setVideoOutput(self.video_widget)
 
+        # 连接媒体播放器信号
+        self.media_player.positionChanged.connect(self.position_changed)
+        self.media_player.durationChanged.connect(self.duration_changed)
+        self.media_player.mediaStatusChanged.connect(self.media_status_changed)
+        
+        # 连接进度条信号
+        self.progress_slider.sliderMoved.connect(self.set_position)
+
         # 自动播放
         self.media_player.setSource(QUrl.fromLocalFile(self.video_path))
         self.media_player.play()
 
-    def reset_hide_timer(self):
-        if self.isFullScreen():
-            self.hide_timer.start()
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+    def position_changed(self, position):
+        """更新进度条位置"""
+        self.progress_slider.setValue(position)
 
-    def update_progress(self, position):
-        self.progress_bar.setValue(position)
-        self.current_time.setText(self.format_time(position))
-        self.remaining_time.setText(self.format_time(
-            self.media_player.duration() - position))
-
-    def update_duration(self, duration):
-        self.progress_bar.setRange(0, duration)
+    def duration_changed(self, duration):
+        """更新进度条范围"""
+        self.progress_slider.setRange(0, duration)
 
     def format_time(self, ms):
         seconds = ms // 1000
@@ -176,12 +100,33 @@ class DarkMediaPlayer(QWidget):
         self.media_player.setPosition(position)
 
     def get_current_time(self):
+        """获取当前播放位置（毫秒）"""
         return self.media_player.position()
-    
+
     def get_media_player(self):
         """获取媒体播放器实例"""
         return self.media_player
     
+    def media_status_changed(self, status):
+        """处理媒体状态改变"""
+        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            # 播放结束时，重置位置并重新播放
+            self.media_player.setPosition(0)
+            self.media_player.play()
+    
+    def progress_slider_click(self, event):
+        """处理进度条点击事件"""
+        # 计算点击位置对应的值
+        value = QStyle.sliderValueFromPosition(
+            self.progress_slider.minimum(),
+            self.progress_slider.maximum(),
+            int(event.position().x()),
+            self.progress_slider.width()
+        )
+        # 设置进度条值和媒体播放位置
+        self.progress_slider.setValue(value)
+        self.media_player.setPosition(value)
+        
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
