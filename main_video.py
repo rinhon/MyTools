@@ -219,7 +219,7 @@ class VideoInterface(QWidget):
 
         # 设置表格属性
         self.segments_label.setBorderVisible(True)  # 设置边框可见
-        self.segments_label.setRowCount(1)  # 设置初始行数
+        self.segments_label.setRowCount(0)  # 设置初始行数
         self.segments_label.setEditTriggers(
             TableWidget.EditTrigger.NoEditTriggers)  # 禁止编辑
         self.segments_label.setSelectionMode(
@@ -449,6 +449,13 @@ class VideoInterface(QWidget):
 
                 # 将此行添加到时间片段列表
                 self.time_segments.append((start_time, time_str))
+                
+                print("\n当前时间片段列表:")
+                if self.time_segments.count == 0:
+                    print("空列表 - 没有时间片段")
+                else:
+                    for i, (start, end) in enumerate(self.time_segments, 1):
+                        print(f"片段 {i}: {start} -> {end}")
 
                 InfoBar.success(
                     title="结束时间已设置",
@@ -512,26 +519,35 @@ class VideoInterface(QWidget):
         menu = RoundMenu()
         # 添加菜单动作
         menu.addAction(
-            Action("删除", triggered=lambda: delete_segment(self, row)))
+            Action("删除", triggered=lambda: self.delete_segment( row)))
         # 在鼠标位置显示菜单
         menu.exec(self.segments_label.viewport().mapToGlobal(position))
         # 删除指定行的时间片段
 
-        def delete_segment(self, row):
-            """删除指定行的时间片段"""
-            # 判断是否删除成功
-            if 0 <= row < len(self.time_segments):
-                # if after_row < row:
-                InfoBar.success(
-                    title="操作成功",
-                    content="已删除时间片段",
-                    parent=self,
-                    duration=2000,
-                    position=InfoBarPosition.BOTTOM_RIGHT
-                )
-                self.time_segments.remove(row)
-                # 更新显示
-                self.update_segments_display()
+    def delete_segment(self, row):
+        """删除指定行的时间片段"""
+        # 判断是否删除成功
+        if 0 <= row < len(self.time_segments):
+            # if after_row < row:
+            InfoBar.success(
+                title="操作成功",
+                content="已删除时间片段",
+                parent=self,
+                duration=2000,
+                position=InfoBarPosition.BOTTOM_RIGHT
+            ) # 输出当前时间片段列表的内容到控制台
+            self.time_segments.pop(row) # 删除指定行
+
+            print("\n当前时间片段列表:")
+            if not self.time_segments:
+                print("空列表 - 没有时间片段")
+            else:
+                for i, (start, end) in enumerate(self.time_segments, 1):
+                    print(f"片段 {i}: {start} -> {end}")
+                    print(row)
+            self.segments_label.removeRow(row-1) # 删除指定行          
+            # 更新显示
+            self.update_segments_display()
 
     # 更新时间片段列表显示
     def update_segments_display(self):
@@ -545,12 +561,16 @@ class VideoInterface(QWidget):
 
             # 计算需要的总行数：已有片段数量 + 1（用于新片段）
             needed_rows = len(self.time_segments) + 1
-            # 确保至少有5行
-            row_count = max(needed_rows, 3)
+            # 确保至少有3行
+            row_count = max(needed_rows, 0)
             self.segments_label.setRowCount(row_count)
 
-            # 批量添加已有时间片段
-            for i, segment in enumerate(self.time_segments):
+            # 对时间片段按开始时间排序（正序）
+            sorted_segments = sorted(self.time_segments, 
+                                    key=lambda segment: self.time_to_seconds(segment[0]))
+
+            # 批量添加已排序的时间片段
+            for i, segment in enumerate(sorted_segments):
                 # 创建并设置单元格
                 for j, text in enumerate(segment[:2]):  # 只取前两个值（开始和结束时间）
                     item = QTableWidgetItem(text)
