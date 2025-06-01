@@ -11,9 +11,12 @@ from PyQt6.QtMultimediaWidgets import QVideoWidget
 from qfluentwidgets import (
     CardWidget, BodyLabel, FluentWindow, PushButton,
     InfoBar, InfoBarIcon, InfoBarPosition,
-    SubtitleLabel, LineEdit, ComboBox, TableWidget, PrimaryToolButton, FluentIcon, PrimaryPushButton, RoundMenu, Action, Flyout, FlyoutAnimationType
+    SubtitleLabel, LineEdit, ComboBox, TableWidget, 
+    PrimaryToolButton, FluentIcon, PrimaryPushButton, 
+    RoundMenu, Action, Flyout, FlyoutAnimationType,
 )
 from qfluentwidgets.multimedia import VideoWidget, MediaPlayer
+
 from video_test import DarkMediaPlayer
 from cut_flyou_view import CutFlyoutView
 import sys
@@ -29,12 +32,12 @@ class VideoInterface(QWidget):
 
         self.setObjectName("视频剪辑")
         self.setWindowTitle("视频剪辑工具")
-        self.setFixedHeight(1100)  # 设置窗口大小
+        # self.setFixedHeight(1100)  # 设置窗口大小
 
         # 设置窗口焦点策略
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()  # 确保窗口获得初始焦点
-
+        self.top_level_widget = None
         self.center_window()  # 设置窗口居中
 
         # 1. 创建主窗口的垂直布局，用于容纳所有
@@ -136,54 +139,180 @@ class VideoInterface(QWidget):
         self.main_v_layout.addWidget(self.video_preview_card1)
 
     # 时间段选择
+    # def time_select_card(self, parent):
+    #     # 3时间段选择====================================================================
+    #     self.time_segment_card = CardWidget()
+    #     self.time_segment_card.setContentsMargins(1, 1, 1, 1)  # 内部边距
+
+    #     # 3-1 标题区====================================================================
+    #     self.time_segment_card_layout = QVBoxLayout(self.time_segment_card)
+    #     self.time_segment_card_layout.setContentsMargins(5, 5, 5, 5)  # 减小边距
+    #     self.time_segment_title = SubtitleLabel(
+    #         "时间段选择", self.time_segment_card)
+    #     self.time_segment_title.setFixedHeight(20)  # 减小高度
+    #     self.time_segment_card_layout.addWidget(self.time_segment_title)
+    #     # 3-2 第二层区域 (三个并排的矩形)====================================================================
+    #     self.time_segment_card_layout2 = QHBoxLayout()
+    #     self.time_segment_card_layout2.setContentsMargins(0, 2, 0, 2)  # 设置小边距
+    #     self.time_segment_card_layout2.setSpacing(8)  # 减小按钮间距
+
+    #     # 3-2-1
+    #     self.current_time_label = BodyLabel(f"当前时间: {self.current_time}")
+    #     self.current_time_label.setFixedHeight(28)  # 减小高度
+
+    #     # 3-2-2
+    #     self.stop_label = PrimaryToolButton(
+    #         FluentIcon.PAUSE, self.time_segment_card)
+    #     self.stop_label.setFixedSize(28, 28)  # 减小按钮大小
+    #     self.stop_label.clicked.connect(self.toggle_play_pause)
+
+    #     # 3-2-3
+    #     self.start_time_label = PushButton("选择开始时间", self.time_segment_card)
+    #     self.start_time_label.setFixedHeight(28)  # 减小高度
+    #     self.start_time_label.clicked.connect(self.set_start_time)
+
+    #     # 3-2-4
+    #     self.end_time_label = PushButton("选择结束时间", self.time_segment_card)
+    #     self.end_time_label.setFixedHeight(28)  # 减小高度
+    #     self.end_time_label.clicked.connect(self.set_end_time)
+
+    #     # 4====================================================================
+
+    #     # 清空所有片段按钮
+    #     self.clear_all_button = PushButton("清空所有片段", self.time_segment_card)
+    #     self.clear_all_button.setFixedHeight(28)  # 减小按钮高度
+    #     self.clear_all_button.clicked.connect(self.clear_all_segments)
+
+    #     # 提示按钮
+    #     self.tip_button = PrimaryToolButton(
+    #         FluentIcon.INFO, self.time_segment_card)
+    #     self.tip_button.setFixedSize(28, 28)  # 减小按钮大小
+    #     self.tip_button.clicked.connect(self.showFlyout)
+
+    #     # 按钮添加至水平布局中
+    #     self.time_segment_card_layout2.addWidget(self.current_time_label)
+    #     self.time_segment_card_layout2.addWidget(self.stop_label)
+    #     self.time_segment_card_layout2.addWidget(self.start_time_label)
+    #     self.time_segment_card_layout2.addWidget(self.end_time_label)
+    #     self.time_segment_card_layout2.addWidget(self.clear_all_button)
+    #     self.time_segment_card_layout2.addWidget(self.tip_button)
+    #     # 将水平布局添加进垂直布局中
+    #     self.time_segment_card_layout.addLayout(self.time_segment_card_layout2)
+
+    #     # 表格处理====================================================================
+    #     self.segments_label = TableWidget(self.time_segment_card)
+
+    #     # 设置基本属性
+    #     self.segments_label.setBorderRadius(8)  # 设置圆角
+    #     self.segments_label.setMinimumHeight(60)  # 减小最小高度
+    #     self.segments_label.setMaximumHeight(120)  # 减小最大高度
+    #     self.segments_label.setColumnCount(2)  # 设置列数
+    #     self.segments_label.setSelectRightClickedRow(True)  # 允许选择右键行
+    #     self.segments_label.setHorizontalHeaderLabels(['开始时间', '结束时间'])  # 设置表头
+    #     self.segments_label.setContentsMargins(2, 2, 2, 2)  # 减小内边距
+
+    #     # 隐藏垂直表头（行号）
+    #     # self.segments_label.verticalHeader().setVisible(False)
+
+    #     # 设置表格大小调整策略
+    #     self.segments_label.horizontalHeader().setSectionResizeMode(
+    #         QHeaderView.ResizeMode.Stretch)  # 列宽自适应
+    #     self.segments_label.verticalHeader().setSectionResizeMode(
+    #         QHeaderView.ResizeMode.Fixed)  # 固定行高
+    #     self.segments_label.verticalHeader().setDefaultSectionSize(30)  # 减小默认行高
+
+    #     # 设置表格属性
+    #     self.segments_label.setBorderVisible(True)  # 设置边框可见
+    #     self.segments_label.setRowCount(1)  # 设置初始行数
+    #     self.segments_label.setEditTriggers(
+    #         TableWidget.EditTrigger.NoEditTriggers)  # 禁止编辑
+    #     self.segments_label.setSelectionMode(
+    #         TableWidget.SelectionMode.SingleSelection)  # 单行选择
+    #     self.segments_label.setSelectionBehavior(
+    #         TableWidget.SelectionBehavior.SelectRows)  # 选择整行
+    #     self.segments_label.setAlternatingRowColors(True)  # 启用交替行颜色
+
+    #     # 优化表格性能
+    #     self.segments_label.setVerticalScrollMode(
+    #         TableWidget.ScrollMode.ScrollPerPixel)  # 像素级滚动
+    #     self.segments_label.setHorizontalScrollMode(
+    #         TableWidget.ScrollMode.ScrollPerPixel)
+
+    #     # 设置表头和单元格样式
+    #     # self.segments_label.horizontalHeader().setStretchLastSection(True)  # 最后一列自动填充
+    #     self.segments_label.horizontalHeader().setDefaultAlignment(
+    #         Qt.AlignmentFlag.AlignCenter)  # 表头居中对齐
+
+    #     self.segments_label.itemChanged.connect(
+    #         lambda item: set_item_alignment(item.row(), item.column(), item))
+    #     # 设置单元格文本居中对齐
+
+    #     def set_item_alignment(row, column, item):
+    #         if item:
+    #             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    #     # 添加右键菜单
+    #     self.segments_label.setContextMenuPolicy(
+    #         Qt.ContextMenuPolicy.CustomContextMenu)
+    #     self.segments_label.customContextMenuRequested.connect(
+    #         self.show_context_menu)
+    #     # 添加进布局
+    #     self.time_segment_card_layout.addWidget(self.segments_label)
+
+    #     # 将第三张卡片添加到主布局中
+    #     self.main_v_layout.addWidget(self.time_segment_card)
+    
+    # 时间段选择
     def time_select_card(self, parent):
         # 3时间段选择====================================================================
         self.time_segment_card = CardWidget()
         self.time_segment_card.setContentsMargins(1, 1, 1, 1)  # 内部边距
-
+        self.time_segment_card.setFixedHeight(300)  # 设置卡片高度
         # 3-1 标题区====================================================================
         self.time_segment_card_layout = QVBoxLayout(self.time_segment_card)
-        self.time_segment_card_layout.setContentsMargins(5, 5, 5, 5)  # 减小边距
-        self.time_segment_title = SubtitleLabel(
-            "时间段选择", self.time_segment_card)
-        self.time_segment_title.setFixedHeight(20)  # 减小高度
+        self.time_segment_card_layout.setContentsMargins(10, 10, 10, 10)  # 统一边距
+        self.time_segment_card_layout.setSpacing(8)  # 统一垂直间距
+        
+        self.time_segment_title = SubtitleLabel("时间段选择", self.time_segment_card)
+        self.time_segment_title.setFixedHeight(30)  # 适当增加标题高度
         self.time_segment_card_layout.addWidget(self.time_segment_title)
+        
         # 3-2 第二层区域 (三个并排的矩形)====================================================================
         self.time_segment_card_layout2 = QHBoxLayout()
-        self.time_segment_card_layout2.setContentsMargins(0, 2, 0, 2)  # 设置小边距
-        self.time_segment_card_layout2.setSpacing(8)  # 减小按钮间距
+        self.time_segment_card_layout2.setContentsMargins(0, 0, 0, 0)  # 移除多余边距
+        self.time_segment_card_layout2.setSpacing(8)  # 统一水平间距
 
-        # 3-2-1
+        # 3-2-1 当前时间标签
         self.current_time_label = BodyLabel(f"当前时间: {self.current_time}")
-        self.current_time_label.setFixedHeight(28)  # 减小高度
+        self.current_time_label.setFixedHeight(32)  # 统一组件高度
+        self.current_time_label.setMinimumWidth(120)  # 设置最小宽度确保显示完整
 
-        # 3-2-2
-        self.stop_label = PrimaryToolButton(
-            FluentIcon.PAUSE, self.time_segment_card)
-        self.stop_label.setFixedSize(28, 28)  # 减小按钮大小
+        # 3-2-2 播放/暂停按钮
+        self.stop_label = PrimaryToolButton(FluentIcon.PAUSE, self.time_segment_card)
+        self.stop_label.setFixedSize(32, 32)  # 统一按钮大小
         self.stop_label.clicked.connect(self.toggle_play_pause)
 
-        # 3-2-3
+        # 3-2-3 开始时间按钮
         self.start_time_label = PushButton("选择开始时间", self.time_segment_card)
-        self.start_time_label.setFixedHeight(28)  # 减小高度
+        self.start_time_label.setFixedHeight(32)  # 统一高度
+        self.start_time_label.setMinimumWidth(100)  # 设置最小宽度
         self.start_time_label.clicked.connect(self.set_start_time)
 
-        # 3-2-4
+        # 3-2-4 结束时间按钮
         self.end_time_label = PushButton("选择结束时间", self.time_segment_card)
-        self.end_time_label.setFixedHeight(28)  # 减小高度
+        self.end_time_label.setFixedHeight(32)  # 统一高度
+        self.end_time_label.setMinimumWidth(100)  # 设置最小宽度
         self.end_time_label.clicked.connect(self.set_end_time)
-
-        # 4====================================================================
 
         # 清空所有片段按钮
         self.clear_all_button = PushButton("清空所有片段", self.time_segment_card)
-        self.clear_all_button.setFixedHeight(28)  # 减小按钮高度
+        self.clear_all_button.setFixedHeight(32)  # 统一高度
+        self.clear_all_button.setMinimumWidth(100)  # 设置最小宽度
         self.clear_all_button.clicked.connect(self.clear_all_segments)
 
         # 提示按钮
-        self.tip_button = PrimaryToolButton(
-            FluentIcon.INFO, self.time_segment_card)
-        self.tip_button.setFixedSize(28, 28)  # 减小按钮大小
+        self.tip_button = PrimaryToolButton(FluentIcon.INFO, self.time_segment_card)
+        self.tip_button.setFixedSize(32, 32)  # 统一按钮大小
         self.tip_button.clicked.connect(self.showFlyout)
 
         # 按钮添加至水平布局中
@@ -193,6 +322,10 @@ class VideoInterface(QWidget):
         self.time_segment_card_layout2.addWidget(self.end_time_label)
         self.time_segment_card_layout2.addWidget(self.clear_all_button)
         self.time_segment_card_layout2.addWidget(self.tip_button)
+        
+        # 添加弹性空间，使按钮靠左对齐
+        # self.time_segment_card_layout2.addStretch()
+        
         # 将水平布局添加进垂直布局中
         self.time_segment_card_layout.addLayout(self.time_segment_card_layout2)
 
@@ -201,12 +334,12 @@ class VideoInterface(QWidget):
 
         # 设置基本属性
         self.segments_label.setBorderRadius(8)  # 设置圆角
-        self.segments_label.setMinimumHeight(60)  # 减小最小高度
-        self.segments_label.setMaximumHeight(120)  # 减小最大高度
+        self.segments_label.setMinimumHeight(80)  # 适当增加最小高度
+        self.segments_label.setMaximumHeight(200)  # 适当增加最大高度
         self.segments_label.setColumnCount(2)  # 设置列数
         self.segments_label.setSelectRightClickedRow(True)  # 允许选择右键行
         self.segments_label.setHorizontalHeaderLabels(['开始时间', '结束时间'])  # 设置表头
-        self.segments_label.setContentsMargins(2, 2, 2, 2)  # 减小内边距
+        self.segments_label.setContentsMargins(0, 0, 0, 0)  # 移除内边距
 
         # 隐藏垂直表头（行号）
         # self.segments_label.verticalHeader().setVisible(False)
@@ -216,7 +349,7 @@ class VideoInterface(QWidget):
             QHeaderView.ResizeMode.Stretch)  # 列宽自适应
         self.segments_label.verticalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Fixed)  # 固定行高
-        self.segments_label.verticalHeader().setDefaultSectionSize(30)  # 减小默认行高
+        self.segments_label.verticalHeader().setDefaultSectionSize(35)  # 统一行高
 
         # 设置表格属性
         self.segments_label.setBorderVisible(True)  # 设置边框可见
@@ -236,14 +369,13 @@ class VideoInterface(QWidget):
             TableWidget.ScrollMode.ScrollPerPixel)
 
         # 设置表头和单元格样式
-        # self.segments_label.horizontalHeader().setStretchLastSection(True)  # 最后一列自动填充
         self.segments_label.horizontalHeader().setDefaultAlignment(
             Qt.AlignmentFlag.AlignCenter)  # 表头居中对齐
 
         self.segments_label.itemChanged.connect(
             lambda item: set_item_alignment(item.row(), item.column(), item))
+        
         # 设置单元格文本居中对齐
-
         def set_item_alignment(row, column, item):
             if item:
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -253,6 +385,7 @@ class VideoInterface(QWidget):
             Qt.ContextMenuPolicy.CustomContextMenu)
         self.segments_label.customContextMenuRequested.connect(
             self.show_context_menu)
+        
         # 添加进布局
         self.time_segment_card_layout.addWidget(self.segments_label)
 
@@ -319,7 +452,7 @@ class VideoInterface(QWidget):
                 content="请先选择视频文件",
                 parent=self,
                 duration=2000,
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             )
             return
 
@@ -346,7 +479,7 @@ class VideoInterface(QWidget):
                     content="请先清除当前行的结束时间",
                     parent=self,
                     duration=2000,
-                    position=InfoBarPosition.BOTTOM_RIGHT
+                    position=InfoBarPosition.TOP_RIGHT
                 )
                 return
 
@@ -357,7 +490,7 @@ class VideoInterface(QWidget):
                     content="请先设置当前行的结束时间",
                     parent=self,
                     duration=2000,
-                    position=InfoBarPosition.BOTTOM_RIGHT
+                    position=InfoBarPosition.TOP_RIGHT
                 )
                 return
 
@@ -374,7 +507,7 @@ class VideoInterface(QWidget):
                     content=f"开始时间: {time_str}",
                     parent=self,
                     duration=2000,
-                    position=InfoBarPosition.BOTTOM_RIGHT
+                    position=InfoBarPosition.TOP_RIGHT
                 )
                 return
 
@@ -394,7 +527,7 @@ class VideoInterface(QWidget):
             content=f"开始时间: {time_str}",
             parent=self,
             duration=2000,
-            position=InfoBarPosition.BOTTOM_RIGHT
+            position=InfoBarPosition.TOP_RIGHT
         )
 
     def set_end_time(self):
@@ -405,7 +538,7 @@ class VideoInterface(QWidget):
                 content="请先选择视频文件",
                 parent=self,
                 duration=2000,
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             )
             return
 
@@ -436,7 +569,7 @@ class VideoInterface(QWidget):
                         content="结束时间必须大于开始时间",
                         parent=self,
                         duration=2000,
-                        position=InfoBarPosition.BOTTOM_RIGHT
+                        position=InfoBarPosition.TOP_RIGHT
                     )
                     return
 
@@ -463,7 +596,7 @@ class VideoInterface(QWidget):
                     content=f"结束时间: {time_str}",
                     parent=self,
                     duration=2000,
-                    position=InfoBarPosition.BOTTOM_RIGHT
+                    position=InfoBarPosition.TOP_RIGHT
                 )
                 break
 
@@ -475,7 +608,7 @@ class VideoInterface(QWidget):
                 content="请先设置开始时间",
                 parent=self,
                 duration=2000,
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             )
 
     # 功能提示
@@ -508,7 +641,7 @@ class VideoInterface(QWidget):
             content="所有时间片段已清空",
             parent=self,
             duration=2000,
-            position=InfoBarPosition.BOTTOM_RIGHT
+            position=InfoBarPosition.TOP_RIGHT
         )
 
     # 右键菜单
@@ -535,7 +668,7 @@ class VideoInterface(QWidget):
                 content="已删除时间片段",
                 parent=self,
                 duration=2000,
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             ) # 输出当前时间片段列表的内容到控制台
             self.time_segments.pop(row) # 删除指定行
 
@@ -627,7 +760,7 @@ class VideoInterface(QWidget):
                 content="请先选择视频文件！",
                 parent=self,
                 duration=2000,
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             )
             return
 
@@ -637,7 +770,7 @@ class VideoInterface(QWidget):
                 content="请先添加时间片段！",
                 parent=self,
                 duration=2000,
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             )
             return
 
@@ -656,7 +789,7 @@ class VideoInterface(QWidget):
                 content="请先选择视频文件并添加时间片段！",
                 parent=self,
                 duration=2000,
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             )
             return
 
@@ -669,7 +802,7 @@ class VideoInterface(QWidget):
                 content="FFmpeg命令已准备就绪，请手动执行或集成到您的系统中",
                 parent=self,
                 duration=3000,
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             )
 
         except Exception as e:
@@ -678,7 +811,7 @@ class VideoInterface(QWidget):
                 content=f"生成命令时出错: {str(e)}",
                 parent=self,
                 duration=3000,
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             )
 
     # 暂停/播放
@@ -724,7 +857,7 @@ class VideoInterface(QWidget):
             content=f"已{action} {abs(seconds)}秒",
             parent=self,
             duration=1000,
-            position=InfoBarPosition.BOTTOM_RIGHT
+            position=InfoBarPosition.TOP_RIGHT
         )
 
     # 选择视频文件
@@ -767,7 +900,7 @@ class VideoInterface(QWidget):
                 content=f"已选择: {file_path}",
                 parent=self,
                 duration=3000,  # 显示3秒后自动消失
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             )
 
             # 重置焦点到主窗口
@@ -789,7 +922,7 @@ class VideoInterface(QWidget):
                 content="您取消了文件选择。",
                 parent=self,
                 duration=2000,
-                position=InfoBarPosition.BOTTOM_RIGHT
+                position=InfoBarPosition.TOP_RIGHT
             )
             # 重置文件路径显示
             if self.video_path != "":
