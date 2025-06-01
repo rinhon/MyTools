@@ -509,6 +509,8 @@ class VideoInterface(QWidget):
                     duration=2000,
                     position=InfoBarPosition.TOP_RIGHT
                 )
+                self.segments_label.setCurrentCell(row, 0)
+
                 return
 
             row -= 1
@@ -521,6 +523,7 @@ class VideoInterface(QWidget):
         item = QTableWidgetItem(time_str)
         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.segments_label.setItem(row, 0, item)
+        self.segments_label.setCurrentCell(row, 0)
 
         InfoBar.success(
             title="开始时间已设置",
@@ -580,6 +583,8 @@ class VideoInterface(QWidget):
                 item = QTableWidgetItem(time_str)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.segments_label.setItem(row, 1, item)
+                self.segments_label.scrollToBottom()  # 自动滚动到底部
+                self.segments_label.setCurrentCell(row, 0)
 
                 # 将此行添加到时间片段列表
                 self.time_segments.append((start_time, time_str))
