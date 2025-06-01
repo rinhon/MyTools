@@ -76,19 +76,20 @@ class Window(FluentWindow):
 
         # 处理多显示器情况
         current_screen = self.screen()
-        screen_rect = current_screen.availableGeometry()
+        if current_screen is not None:
+            screen_rect = current_screen.availableGeometry()
 
-        # 计算居中坐标
-        x = screen_rect.left() + (screen_rect.width() - window_size.width()) // 2
-        y = screen_rect.top() + (screen_rect.height() - window_size.height()) // 2
+            # 计算居中坐标
+            x = screen_rect.left() + (screen_rect.width() - window_size.width()) // 2
+            y = screen_rect.top() + (screen_rect.height() - window_size.height()) // 2
 
-        # 设置窗口位置并限制在屏幕范围内
-        self.move(
-            max(screen_rect.left(), min(
-                x, screen_rect.right() - window_size.width())),
-            max(screen_rect.top(), min(
-                y, screen_rect.bottom() - window_size.height()))
-        )
+            # 设置窗口位置并限制在屏幕范围内
+            self.move(
+                max(screen_rect.left(), min(
+                    x, screen_rect.right() - window_size.width())),
+                max(screen_rect.top(), min(
+                    y, screen_rect.bottom() - window_size.height()))
+            )
 
 
 if __name__ == '__main__':

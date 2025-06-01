@@ -15,6 +15,7 @@ from qfluentwidgets import (
 )
 from qfluentwidgets.multimedia import VideoWidget, MediaPlayer
 from video_test import DarkMediaPlayer
+from cut_flyou_view import CutFlyoutView
 import sys
 import os
 import tempfile
@@ -28,7 +29,7 @@ class VideoInterface(QWidget):
 
         self.setObjectName("视频剪辑")
         self.setWindowTitle("视频剪辑工具")
-        self.setFixedHeight(900)  # 设置窗口大小
+        self.setFixedHeight(1100)  # 设置窗口大小
 
         # 设置窗口焦点策略
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -45,7 +46,7 @@ class VideoInterface(QWidget):
         self.video_path = ""
         self.time_segments = []  # 剪切时间段列表，存储多个时间片段
         self.current_time = "00:00:00"  # 当前播放时间
-        self.segments_label = None
+
         # 创建定时器用于更新当前时间
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_current_time)
@@ -211,20 +212,15 @@ class VideoInterface(QWidget):
         # self.segments_label.verticalHeader().setVisible(False)
 
         # 设置表格大小调整策略
-        # 确保header对象存在
-        if self.segments_label.horizontalHeader() is not None:
-            self.segments_label.horizontalHeader().setSectionResizeMode(
-                QHeaderView.ResizeMode.Stretch)  # 列宽自适应
+        self.segments_label.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch)  # 列宽自适应
+        self.segments_label.verticalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Fixed)  # 固定行高
+        self.segments_label.verticalHeader().setDefaultSectionSize(30)  # 减小默认行高
 
-        if self.segments_label.verticalHeader() is not None:
-            self.segments_label.verticalHeader().setSectionResizeMode(
-                QHeaderView.ResizeMode.ResizeToContents)  # 行高自适应内容
-            self.segments_label.verticalHeader().setDefaultSectionSize(30)  # 减小默认行高
-
-      
         # 设置表格属性
         self.segments_label.setBorderVisible(True)  # 设置边框可见
-        self.segments_label.setRowCount(0)  # 设置初始行数
+        self.segments_label.setRowCount(1)  # 设置初始行数
         self.segments_label.setEditTriggers(
             TableWidget.EditTrigger.NoEditTriggers)  # 禁止编辑
         self.segments_label.setSelectionMode(
@@ -240,7 +236,7 @@ class VideoInterface(QWidget):
             TableWidget.ScrollMode.ScrollPerPixel)
 
         # 设置表头和单元格样式
-        self.segments_label.horizontalHeader().setStretchLastSection(True)  # 最后一列自动填充
+        # self.segments_label.horizontalHeader().setStretchLastSection(True)  # 最后一列自动填充
         self.segments_label.horizontalHeader().setDefaultAlignment(
             Qt.AlignmentFlag.AlignCenter)  # 表头居中对齐
 
@@ -337,9 +333,6 @@ class VideoInterface(QWidget):
         if current_time == "00:00:00.000":
             return
 
-        if self.segments_label is None:
-            return
-        
         # 获取表格当前行
         row = self.segments_label.rowCount() - 1
         while row >= 0:
@@ -424,8 +417,7 @@ class VideoInterface(QWidget):
         # current_time = self.ms_to_time_string(current_ms)
         if current_ms == "00:00:00.0000":
             return
-        if self.segments_label is None:
-            return
+
         # 查找有开始时间但没有结束时间的行
         row = 0
         found = False
@@ -458,7 +450,7 @@ class VideoInterface(QWidget):
 
                 # 将此行添加到时间片段列表
                 self.time_segments.append((start_time, time_str))
-
+                
                 print("\n当前时间片段列表:")
                 if self.time_segments.count == 0:
                     print("空列表 - 没有时间片段")
@@ -522,23 +514,19 @@ class VideoInterface(QWidget):
     # 右键菜单
     def show_context_menu(self, position):
         """显示右键菜单"""
-        if self.segments_label is None:
-            return
         # 获取当前选中的行
         row = self.segments_label.currentRow()
         # 创建菜单
         menu = RoundMenu()
         # 添加菜单动作
         menu.addAction(
-            Action("删除", triggered=lambda: self.delete_segment(row)))
+            Action("删除", triggered=lambda: self.delete_segment( row)))
         # 在鼠标位置显示菜单
         menu.exec(self.segments_label.mapToGlobal(position))
         # 删除指定行的时间片段
 
     def delete_segment(self, row):
         """删除指定行的时间片段"""
-        if self.segments_label is None:
-            return  
         # 判断是否删除成功
         if 0 <= row < len(self.time_segments):
             # if after_row < row:
@@ -548,8 +536,8 @@ class VideoInterface(QWidget):
                 parent=self,
                 duration=2000,
                 position=InfoBarPosition.BOTTOM_RIGHT
-            )  # 输出当前时间片段列表的内容到控制台
-            self.time_segments.pop(row)  # 删除指定行
+            ) # 输出当前时间片段列表的内容到控制台
+            self.time_segments.pop(row) # 删除指定行
 
             print("\n当前时间片段列表:")
             if not self.time_segments:
@@ -557,16 +545,13 @@ class VideoInterface(QWidget):
             else:
                 for i, (start, end) in enumerate(self.time_segments, 1):
                     print(f"片段 {i}: {start} -> {end}")
-                    print(row)
-            self.segments_label.removeRow(row-1)  # 删除指定行
+                    
             # 更新显示
             self.update_segments_display()
 
     # 更新时间片段列表显示
     def update_segments_display(self):
         """ 更新时间片段列表显示 """
-        if self.segments_label is None:
-            return
         # 暂时关闭表格更新以提高性能
         self.segments_label.setUpdatesEnabled(False)
 
@@ -577,12 +562,12 @@ class VideoInterface(QWidget):
             # 计算需要的总行数：已有片段数量 + 1（用于新片段）
             needed_rows = len(self.time_segments) + 1
             # 确保至少有3行
-            row_count = max(needed_rows, 0)
+            row_count = max(needed_rows, 3)
             self.segments_label.setRowCount(row_count)
 
             # 对时间片段按开始时间排序（正序）
-            sorted_segments = sorted(self.time_segments,
-                                     key=lambda segment: self.time_to_seconds(segment[0]))
+            sorted_segments = sorted(self.time_segments, 
+                                    key=lambda segment: self.time_to_seconds(segment[0]))
 
             # 批量添加已排序的时间片段
             for i, segment in enumerate(sorted_segments):
@@ -676,10 +661,9 @@ class VideoInterface(QWidget):
             return
 
         try:
-            ffmpeg_cmd = self.generate_ffmpeg_command()
-
-            # 这里可以添加实际执行FFmpeg的逻辑
-            # 注意：实际执行时可能需要更复杂的处理
+       
+            # 
+            Flyout.make(CutFlyoutView(self),self.execute_cut_button, self, aniType=FlyoutAnimationType.PULL_UP)
             InfoBar.info(
                 title="准备执行",
                 content="FFmpeg命令已准备就绪，请手动执行或集成到您的系统中",
@@ -716,8 +700,7 @@ class VideoInterface(QWidget):
         """视频快进/后退指定秒数"""
         if not self.video_widget:
             return
-        if self.segments_label is None:
-            return
+
         # 获取当前时间（毫秒）
         current_ms = self.video_widget.get_current_time()
         if current_ms is None:
@@ -725,16 +708,14 @@ class VideoInterface(QWidget):
 
         # 计算新位置（毫秒）
         new_pos = current_ms + seconds * 1000
-        
-        if self.video_widget.media_player is None:
-            return
 
         # 确保不超出视频范围
-        duration = self.video_widget.media_player.duration()
-        new_pos = max(0, min(new_pos, duration))
+        if self.video_widget.media_player is not None:
+            duration = self.video_widget.media_player.duration()
+            new_pos = max(0, min(new_pos, duration))
 
-        # 跳转到新位置
-        self.video_widget.media_player.setPosition(new_pos)
+            # 跳转到新位置
+            self.video_widget.media_player.setPosition(new_pos)
 
         # 显示操作提示
         action = "后退" if seconds < 0 else "前进"
@@ -827,7 +808,8 @@ class VideoInterface(QWidget):
 
         # 处理多显示器情况
         current_screen = self.screen()
-        screen_rect = current_screen.availableGeometry()
+        if current_screen is not None:
+            screen_rect = current_screen.availableGeometry()
 
         # 计算居中坐标
         x = screen_rect.left() + (screen_rect.width() - window_size.width()) // 2
