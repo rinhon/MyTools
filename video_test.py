@@ -3,6 +3,7 @@ import os
 import base64
 
 from PyQt6.QtCore import Qt, QByteArray, QTimer, QSize, QUrl, QPropertyAnimation
+from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,QStyle,
                              QSlider, QPushButton, QLabel, QFileDialog,QSizePolicy,
                              QGraphicsDropShadowEffect, QGraphicsOpacityEffect, QApplication)
@@ -62,8 +63,9 @@ class DarkMediaPlayer(QWidget):
         self.progress_slider = Slider(Qt.Orientation.Horizontal)
         self.progress_slider.setFixedHeight(30)
         self.progress_slider.setRange(0, 0)  # 初始范围设为0，等待媒体加载后更新
-        self.progress_slider.mousePressEvent = self.progress_slider_click
-
+        # self.progress_slider.mousePressEvent = self.progress_slider_click()
+        self.progress_slider.sliderPressed.connect(self.progress_slider_click)
+        
         # 添加组件到主布局
         self.main_layout.addWidget(self.video_container, 1)  # 1表示拉伸因子
         self.main_layout.addWidget(self.progress_slider)
@@ -279,8 +281,9 @@ class DarkMediaPlayer(QWidget):
         except Exception as e:
             print(f"处理媒体状态改变时出错: {e}")
     
-    def progress_slider_click(self, event):
+    def progress_slider_click(self, event: QMouseEvent):
         """处理进度条点击事件"""
+        super().mousePressEvent(event)
         # 计算点击位置对应的值
         value = QStyle.sliderValueFromPosition(
             self.progress_slider.minimum(),
@@ -290,7 +293,8 @@ class DarkMediaPlayer(QWidget):
         )
         # 设置进度条值和媒体播放位置
         self.progress_slider.setValue(value)
-        self.media_player.setPosition(value)
+        if self.media_player is not None:
+            self.media_player.setPosition(value)
     
     def __del__(self):
         """析构函数，确保资源被正确释放"""
